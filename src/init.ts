@@ -45,7 +45,12 @@ export default async function initVm() {
     "-netdev",
     "user,id=n1",
     "-device",
-    "e1000,netdev=n1",
+    `${Bun.env.SVM_NET_DEVICE || "e1000"},netdev=n1`,
+
+    // maus
+    "-usb",
+    "-device",
+    "usb-tablet",
 
     // drives
     "-drive",
