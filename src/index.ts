@@ -53,7 +53,11 @@ const app = new App({
 let isReady = false;
 let isProcessing = false;
 
-let votesForRestart = 0;
+type voteThing = {
+  userId: string;
+  timestamp: number;
+}
+let votesForRestart: voteThing[] = [];
 const VOTES_NEEDED = Number(Bun.env.RESTART_VOTES_NEEDED) || 3;
 
 app.message("", async ({ message, say, client }) => {
@@ -70,6 +74,20 @@ app.message("", async ({ message, say, client }) => {
 
   function prefixUserid(title: string) {
     return `@${msg.user} | ${title}`;
+  }
+
+  function addVote(userId: string): boolean {
+    const existingVote = votesForRestart.find(vote => vote.userId === userId);
+    if (existingVote) {
+      return false; // already voted
+    } else {
+      votesForRestart.push({ userId, timestamp: Date.now() });
+      return true; // vote added
+    }
+  }
+
+  function clearAllVotes() {
+    votesForRestart = [];
   }
 
   if (
@@ -288,12 +306,17 @@ app.message("", async ({ message, say, client }) => {
         }
       }
     } else if (text === "restart") {
-      votesForRestart++;
-      if (votesForRestart >= VOTES_NEEDED) {
+      const voteAdded = addVote(msg.user);
+      if (!voteAdded) {
+        await say(`You have already voted for a restart.`);
+        isProcessing = false;
+        return;
+      }
+      if (votesForRestart.length >= VOTES_NEEDED) {
         await say(
-          `Received ${votesForRestart}/${VOTES_NEEDED} votes for restart. Restarting VM...`,
+          `Received ${votesForRestart.length}/${VOTES_NEEDED} votes for restart. Restarting VM...`,
         );
-        votesForRestart = 0;
+        clearAllVotes();
         await restartVm();
         const screenshot = await printScreen();
         if (screenshot) {
@@ -306,7 +329,7 @@ app.message("", async ({ message, say, client }) => {
         }
       } else if (isOwner) {
         await say(`Admin restart triggered, restarting VM immediately.`);
-        votesForRestart = 0;
+        clearAllVotes();
         await restartVm();
         const screenshot = await printScreen();
         if (screenshot) {
@@ -319,8 +342,8 @@ app.message("", async ({ message, say, client }) => {
         }
       } else {
         await say(
-          `Received ${votesForRestart} votes for restart. Need ${
-            VOTES_NEEDED - votesForRestart
+          `Received ${votesForRestart.length} votes for restart. Need ${
+            VOTES_NEEDED - votesForRestart.length
           } more votes to restart.`,
         );
         isProcessing = false;
