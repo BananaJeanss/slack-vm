@@ -9,17 +9,15 @@ export async function moveMouse(x: number, y: number) {
 
 export async function clickMouse(button: "left" | "right" | "middle") {
   let buttonCode: number;
-  switch (
-    button // bitmask
-  ) {
+  switch (button) {
     case "left":
       buttonCode = 1;
       break;
-    case "right":
-      buttonCode = 4;
-      break;
     case "middle":
       buttonCode = 2;
+      break;
+    case "right":
+      buttonCode = 4;
       break;
     default:
       console.warn(`Mouse button "${button}" is not recognized.`);
@@ -28,13 +26,13 @@ export async function clickMouse(button: "left" | "right" | "middle") {
 
   // press
   await QmpCommand("human-monitor-command", {
-    "command-line": `mouse_button ${buttonCode} 1`,
+    "command-line": `mouse_button ${buttonCode}`, 
   });
 
   await sleep(50);
 
   // release
   await QmpCommand("human-monitor-command", {
-    "command-line": `mouse_button ${buttonCode} 0`,
+    "command-line": `mouse_button 0`, 
   });
 }

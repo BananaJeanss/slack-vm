@@ -20,6 +20,28 @@ if (
   process.exit(1);
 }
 
+// test LAN access - will fail if iptables blocks it
+try {
+  const proc = Bun.spawn(["ping", "-c", "1", "-W", "1", "192.168.1.1"], {
+    stderr: "ignore",
+    stdout: "ignore",
+  });
+
+  const exitCode = await proc.exited;
+
+  if (exitCode === 0) {
+    console.warn("------------------------------------------------");
+    console.warn(
+      "WARNING: LAN access detected!\nYou should run this under a non-privileged user and configure iptables to block LAN access for security reasons.",
+    );
+    console.warn("------------------------------------------------");
+  } else {
+    // good
+  }
+} catch (e) {
+  // good
+}
+
 const app = new App({
   socketMode: true,
   appToken: Bun.env.SLACK_APP_TOKEN,
@@ -48,6 +70,8 @@ app.message("", async ({ message, say, client }) => {
   if (
     !isReady ||
     msg.subtype === "bot_message" ||
+    msg.subtype === "channel_join" ||
+    msg.thread_ts ||
     msg.channel !== Bun.env.SLACK_CHANNEL_ID ||
     isProcessing
   ) {
@@ -55,7 +79,16 @@ app.message("", async ({ message, say, client }) => {
     return;
   }
 
-  const text = msg.text?.toLowerCase().trim() || "";
+  let rawText = msg.text?.trim() || "";
+
+  rawText = rawText
+    .replace(/<http[s]?:\/\/[^|>]+\|([^>]+)>|<(http[s]?:\/\/[^>]+)>/g, "$1$2")
+    .replace(/&gt;/g, ">")
+    .replace(/&lt;/g, "<")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+  const text = rawText.toLowerCase();
 
   // owner check
   const isOwner = msg.user === Bun.env.SLACK_BOTADMIN_USERID;
@@ -156,7 +189,7 @@ app.message("", async ({ message, say, client }) => {
         }
       }
     } else if (text.startsWith("type ")) {
-      const input = text.replace("type ", "").trim();
+      const input = rawText.slice(5);
       let allValid = true;
       for (const char of input) {
         const qemuKey = getQemuKey(char);

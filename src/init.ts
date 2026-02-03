@@ -33,21 +33,37 @@ export default async function initVm() {
   let args = [
     "-enable-kvm",
     "-display",
-    "none",
+    `${Bun.env.ENABLE_VNC_SERVER === "true" ? "vnc=127.0.0.1:0" : "none"}`,
     "-m",
-    Bun.env.SVM_RAM || "512M", // ram
+    Bun.env.SVM_RAM || "512M",
+
+    // sandboxing
+    "-sandbox",
+    "on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny",
+
+    // networking
+    "-netdev",
+    "user,id=n1",
+    "-device",
+    "e1000,netdev=n1",
+
+    // drives
     "-drive",
     `file=${Bun.env.SVM_DISK},format=raw,index=0,media=disk`,
+
+    // monitor via qmp
     "-qmp",
-    "tcp:localhost:4444,server,nowait", // qmp socket
+    "tcp:127.0.0.1:4444,server,nowait",
+
+    // output
     "-vga",
-    "std", // vga output
+    "std",
   ];
 
   try {
     if (Bun.env.SVM_ISO) {
       args.push("-cdrom", Bun.env.SVM_ISO);
-      args.push("-boot", "d");
+      args.push("-boot", "order=cd,menu=on");
     }
 
     Bun.spawn(["qemu-system-x86_64", ...args]);
@@ -88,12 +104,12 @@ export default async function initVm() {
 }
 
 export async function restartVm() {
-    console.log("Restarting VM...");
-    QmpCommand("system_reset");
-    await sleep(5000); // wait a second
-    vmUpSince = Date.now();
-    console.log("VM restarted successfully.");
-    return 0;
+  console.log("Restarting VM...");
+  QmpCommand("system_reset");
+  await sleep(5000); // wait a second
+  vmUpSince = Date.now();
+  console.log("VM restarted successfully.");
+  return 0;
 }
 
 export async function killVm() {
