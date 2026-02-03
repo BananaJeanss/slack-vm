@@ -2,7 +2,7 @@
   "name": "slack-vm",
   "module": "src/index.ts",
   "scripts": {
-    "dev": "bun run src/index.ts"
+    "start": "bun run src/index.ts"
   },
   "type": "module",
   "private": true,

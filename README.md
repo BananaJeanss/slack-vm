@@ -1,15 +1,56 @@
+<div align="center">
+<img src="./assets/slackvmlogo.png" width="200" />
+</div>
+
 # slack-vm
 
-To install dependencies:
+Control a QEMU VM, through slack!
 
-```bash
-bun install
-```
+## Commands
 
-To run:
+| Command           | Description                                                                                  | Example Usage             |
+| :---------------- | :------------------------------------------------------------------------------------------- | :------------------------ |
+| `print`           | Takes a screenshot of the VM's current screen.                                               | `print`                   |
+| `key <key>`       | Presses a single key on the VM.                                                              | `key enter`, `key escape` |
+| `keypress <key>`  | Presses a specific key followed immediately by the `enter` key.                              | `keypress return`         |
+| `combo <keys>`    | Executes a key combination. Use `+` to separate keys.                                        | `combo ctrl+alt+delete`   |
+| `type <text>`     | Types a sequence of characters into the VM.                                                  | `type echo "hello world"` |
+| `move <dir> <px>` | Moves the mouse cursor in a direction (`up`, `down`, `left`, `right`) by a number of pixels. | `move right 100`          |
+| `click <button>`  | Performs a mouse click with the specified button (`left`, `right`, or `middle`).             | `click left`              |
+| `restart`         | Votes to restart the VM.                                                                     | `restart`                 |
 
-```bash
-bun run index.ts
-```
+## Dev Setup
 
-This project was created using `bun init` in bun v1.3.8. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+Requirements:
+
+- [Bun](https://bun.sh)
+- [QEMU](https://www.qemu.org)
+
+1. Install dependencies
+
+   ```bash
+   bun install
+   ```
+
+2. Create a qcow disk and download an ISO
+
+   ```bash
+   qemu-img create arch.qcow 5G
+   ```
+
+3. Create a `.env` file in the root directory, based on the `.env.example` file.
+
+   ```bash
+   cp .env.example .env
+   nano .env
+   ```
+
+4. Run the bot
+
+   ```bash
+   bun start
+   ```
+
+## LICENSE
+
+[MIT License](LICENSE) yadayada
