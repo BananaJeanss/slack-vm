@@ -1,11 +1,24 @@
 import { App } from "@slack/bolt";
-import initVm, { killVm } from "./init";
+import initVm, { killVm, restartVm } from "./init";
 import printScreen from "./print";
 import fs from "fs";
 import { getQemuKey } from "./keymap";
 import { keyCombo, keyPress, keyPressEnter, keySequence } from "./keypress";
 import { sleep } from "bun";
 import { clickMouse } from "./mouse";
+
+// basic linux/qemu check
+if (process.platform !== "linux") {
+  console.error("slack-vm currently only supports Linux");
+  process.exit(1);
+}
+
+if (
+  Bun.spawnSync(["which", "qemu-system-x86_64"]).stdout.toString().trim() === ""
+) {
+  console.error("qemu-system-x86_64 not found in PATH. Please install QEMU.");
+  process.exit(1);
+}
 
 const app = new App({
   socketMode: true,
@@ -17,19 +30,34 @@ const app = new App({
 let isReady = false;
 let isProcessing = false;
 
-app.message("", async ({ message, say }) => {
+let votesForRestart = 0;
+const VOTES_NEEDED = Number(Bun.env.RESTART_VOTES_NEEDED) || 3;
+
+app.message("", async ({ message, say, client }) => {
   const msg = message as any;
 
-  if (!isReady) return;
-  if (msg.channel !== Bun.env.SLACK_CHANNEL_ID) return;
-  if (isProcessing) {
-    console.log("Busy...");
+  if (
+    !isReady ||
+    msg.subtype === "bot_message" ||
+    msg.channel !== Bun.env.SLACK_CHANNEL_ID ||
+    isProcessing
+  ) {
+    client.reactions.add({
+      name: "no_entry_sign",
+      channel: msg.channel,
+      timestamp: msg.ts,
+    });
     return;
   }
 
   const text = msg.text?.toLowerCase().trim() || "";
 
   isProcessing = true;
+  client.reactions.add({
+    name: "hourglass_flowing_sand",
+    channel: msg.channel,
+    timestamp: msg.ts,
+  });
 
   try {
     if (text.includes("print")) {
@@ -206,7 +234,38 @@ app.message("", async ({ message, say }) => {
           await say("Failed to take screenshot after clicking mouse.");
         }
       }
+    } else if (text === "restart") {
+      votesForRestart++;
+      if (votesForRestart >= VOTES_NEEDED) {
+        await say(
+          `Received ${votesForRestart}/${VOTES_NEEDED} votes for restart. Restarting VM...`,
+        );
+        votesForRestart = 0;
+        await restartVm();
+        const screenshot = await printScreen();
+        if (screenshot) {
+          await app.client.files.uploadV2({
+            channel_id: msg.channel,
+            file: fs.createReadStream(screenshot),
+            filename: screenshot,
+            title: `VM Restarted`,
+          });
+        }
+      } else {
+        await say(
+          `Received ${votesForRestart} votes for restart. Need ${
+            VOTES_NEEDED - votesForRestart
+          } more votes to restart.`,
+        );
+        isProcessing = false;
+        return;
+      }
     } else {
+      if (text.startsWith("#")) {
+        // ignore
+        isProcessing = false;
+        return;
+      }
       await say(`Unknown command: ${text}`);
     }
   } catch (e) {
@@ -224,7 +283,7 @@ app.message("", async ({ message, say }) => {
   console.log(`slack-vm running | ${new Date().toISOString()}`);
   app.client.chat.postMessage({
     channel: Bun.env.SLACK_CHANNEL_ID || "",
-    text: "slack-vm is now online!",
+    text: `slack-vm is now online! || ${new Date().toDateString()}`,
   });
   isReady = true;
 })();

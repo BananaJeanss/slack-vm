@@ -83,6 +83,13 @@ export default async function initVm() {
   }
 }
 
+export async function restartVm() {
+    console.log("Restarting VM...");
+    QmpCommand("system_reset");
+    await sleep(5000); // wait a second
+    return 0;
+}
+
 export async function killVm() {
   // kill qemu process on port 4444
   try {
