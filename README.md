@@ -18,6 +18,10 @@ Control a QEMU VM, through slack!
 | `move <dir> <px>` | Moves the mouse cursor in a direction (`up`, `down`, `left`, `right`) by a number of pixels. | `move right 100`          |
 | `click <button>`  | Performs a mouse click with the specified button (`left`, `right`, or `middle`).             | `click left`              |
 | `restart`         | Votes to restart the VM.                                                                     | `restart`                 |
+| `uptime`          | Displays the bot and VM uptime.                                                              | `uptime`                  |
+
+>[!NOTE]
+> You can add # in front of your messages for it to be ignored by the bot.
 
 ## Dev Setup
 

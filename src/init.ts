@@ -1,6 +1,8 @@
 import { sleep } from "bun";
 import { QmpCommand } from "./command";
 
+export let vmUpSince: number = 0;
+
 // init the qemu vm
 export default async function initVm() {
   console.log("Initializing VM...");
@@ -77,6 +79,8 @@ export default async function initVm() {
     if (!started) {
       throw new Error("QEMU failed to start in time");
     }
+    vmUpSince = Date.now();
+    console.log("QEMU started successfully.");
     return 0;
   } catch (e) {
     throw new Error(`Failed to start qemu: ${e}`);
@@ -87,6 +91,8 @@ export async function restartVm() {
     console.log("Restarting VM...");
     QmpCommand("system_reset");
     await sleep(5000); // wait a second
+    vmUpSince = Date.now();
+    console.log("VM restarted successfully.");
     return 0;
 }
 
@@ -94,6 +100,8 @@ export async function killVm() {
   // kill qemu process on port 4444
   try {
     QmpCommand("quit");
+    vmUpSince = 0;
+    console.log("VM killed successfully.");
     return 0;
   } catch (e) {
     throw new Error(`Failed to kill qemu: ${e}`);

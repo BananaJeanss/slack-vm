@@ -1,5 +1,5 @@
 import { App } from "@slack/bolt";
-import initVm, { killVm, restartVm } from "./init";
+import initVm, { killVm, restartVm, vmUpSince } from "./init";
 import printScreen from "./print";
 import fs from "fs";
 import { getQemuKey } from "./keymap";
@@ -356,6 +356,35 @@ app.message("", async ({ message, say, client }) => {
           isProcessing = false;
           return;
         }
+      }
+      if (text === "uptime") {
+        // proc uptime
+        const uptimeMs = process.uptime() * 1000;
+        const uptimeDays = Math.floor(uptimeMs / (1000 * 60 * 60 * 24));
+        const uptimeHours = Math.floor(
+          (uptimeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+        );
+        const uptimeMinutes = Math.floor(
+          (uptimeMs % (1000 * 60 * 60)) / (1000 * 60),
+        );
+        const uptimeSeconds = Math.floor((uptimeMs % (1000 * 60)) / 1000);
+
+        // vm uptime
+        const vmUptimeMs = Date.now() - vmUpSince;
+        const vmUptimeDays = Math.floor(vmUptimeMs / (1000 * 60 * 60 * 24));
+        const vmUptimeHours = Math.floor(
+          (vmUptimeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+        );
+        const vmUptimeMinutes = Math.floor(
+          (vmUptimeMs % (1000 * 60 * 60)) / (1000 * 60),
+        );
+        const vmUptimeSeconds = Math.floor((vmUptimeMs % (1000 * 60)) / 1000);
+
+        await say(
+          `Bun uptime: ${uptimeDays}d ${uptimeHours}h ${uptimeMinutes}m ${uptimeSeconds}s\nVM uptime: ${vmUptimeDays}d ${vmUptimeHours}h ${vmUptimeMinutes}m ${vmUptimeSeconds}s`,
+        );
+        isProcessing = false;
+        return;
       }
       await say(`Unknown command: ${text}`);
     }
