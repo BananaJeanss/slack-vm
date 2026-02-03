@@ -6,6 +6,7 @@ import { getQemuKey } from "./keymap";
 import { keyCombo, keyPress, keyPressEnter, keySequence } from "./keypress";
 import { sleep } from "bun";
 import { clickMouse } from "./mouse";
+import { updateChannelCanvas } from "./canvas";
 
 // basic linux/qemu check
 if (process.platform !== "linux") {
@@ -436,6 +437,8 @@ app.message("", async ({ message, say, client }) => {
     text: `slack-vm is now online! || ${new Date().toDateString()}`,
   });
   isReady = true;
+  // update channel canvas
+  updateChannelCanvas(app);
 })();
 
 process.on("SIGINT", async () => {

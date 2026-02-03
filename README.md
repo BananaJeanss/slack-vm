@@ -1,5 +1,5 @@
 <div align="center">
-<img src="./assets/slackvmlogo.png" width="200" />
+<img src="https://github.com/BananaJeanss/slack-vm/blob/main/assets/slackvmlogo.png?raw=true" width="200" />
 </div>
 
 # slack-vm
