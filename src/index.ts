@@ -2,6 +2,10 @@ import { App } from "@slack/bolt";
 import initVm, { killVm } from "./init";
 import printScreen from "./print";
 import fs from "fs";
+import { getQemuKey } from "./keymap";
+import { keyCombo, keyPress, keyPressEnter, keySequence } from "./keypress";
+import { sleep } from "bun";
+import { clickMouse } from "./mouse";
 
 const app = new App({
   socketMode: true,
@@ -12,31 +16,205 @@ const app = new App({
 
 let isReady = false;
 let isProcessing = false;
+
 app.message("", async ({ message, say }) => {
-  if (!isReady || isProcessing) return; // not ready yet
-  // check that it's in the set channel
-  if ((message as any).channel !== Bun.env.SLACK_CHANNEL_ID) {
-    return;
-  }
-  isProcessing = true;
-  if ((message as any).text?.includes("print")) {
-    const filename = await printScreen();
-    if (filename) {
-      await app.client.files.uploadV2({
-        channel_id: Bun.env.SLACK_CHANNEL_ID || "",
-        file: fs.createReadStream(`${filename}`),
-        filename: filename,
-        title: `VM Screenshot | ${new Date().toISOString()}`,
-      });
-    } else {
-      await say("Failed to take screenshot.");
-    }
-    isProcessing = false;
+  const msg = message as any;
+
+  if (!isReady) return;
+  if (msg.channel !== Bun.env.SLACK_CHANNEL_ID) return;
+  if (isProcessing) {
+    console.log("Busy...");
     return;
   }
 
-  isProcessing = false;
-  await say(`Unknown command.`);
+  const text = msg.text?.toLowerCase().trim() || "";
+
+  isProcessing = true;
+
+  try {
+    if (text.includes("print")) {
+      const filename = await printScreen();
+      if (filename) {
+        await app.client.files.uploadV2({
+          channel_id: msg.channel,
+          file: fs.createReadStream(filename),
+          filename: filename,
+          title: `VM Screenshot | ${new Date().toISOString()}`,
+        });
+      } else {
+        await say("Failed to take screenshot.");
+      }
+    } else if (text.startsWith("key ")) {
+      const input = text.replace("key ", "").trim();
+      const qemuKey = getQemuKey(input);
+
+      if (qemuKey) {
+        await keyPress(input);
+        // delay to let the OS react before screenshotting
+        await sleep(1000);
+
+        const screenshot = await printScreen();
+        if (screenshot) {
+          await app.client.files.uploadV2({
+            channel_id: msg.channel,
+            file: fs.createReadStream(screenshot),
+            filename: screenshot,
+            title: `Pressed ${input}`,
+          });
+        }
+      } else {
+        await say(`Key "${input}" not recognized.`);
+      }
+    } else if (text.startsWith("keypress ")) {
+      const input = text.replace("keypress ", "").trim();
+      const qemuKey = getQemuKey(input);
+
+      if (qemuKey) {
+        await keyPressEnter(input);
+        // delay to let the OS react before screenshotting
+        await sleep(1000);
+
+        const screenshot = await printScreen();
+        if (screenshot) {
+          await app.client.files.uploadV2({
+            channel_id: msg.channel,
+            file: fs.createReadStream(screenshot),
+            filename: screenshot,
+            title: `Pressed ${input}`,
+          });
+        }
+      } else {
+        await say(`Key "${input}" not recognized.`);
+      }
+    } else if (text.startsWith("combo ")) {
+      const input = text.replace("combo ", "").trim();
+      const keys = input.split("+").map((k: string) => k.trim());
+      let allValid = true;
+      for (const key of keys) {
+        if (getQemuKey(key) === null) {
+          allValid = false;
+          await say(`Key "${key}" not recognized.`);
+          break;
+        }
+      }
+      if (allValid) {
+        await keyCombo(keys);
+        // delay to let the OS react before screenshotting
+        await sleep(1000);
+
+        const screenshot = await printScreen();
+        if (screenshot) {
+          await app.client.files.uploadV2({
+            channel_id: msg.channel,
+            file: fs.createReadStream(screenshot),
+            filename: screenshot,
+            title: `Pressed combo ${input}`,
+          });
+        }
+      }
+    } else if (text.startsWith("type ")) {
+      const input = text.replace("type ", "").trim();
+      let allValid = true;
+      for (const char of input) {
+        const qemuKey = getQemuKey(char);
+        if (qemuKey === null) {
+          allValid = false;
+          await say(`Character "${char}" not recognized.`);
+          break;
+        }
+      }
+      if (allValid) {
+        await keySequence(input.split(""));
+        // delay to let the OS react before screenshotting
+        await sleep(1000);
+
+        const screenshot = await printScreen();
+        if (screenshot) {
+          await app.client.files.uploadV2({
+            channel_id: msg.channel,
+            file: fs.createReadStream(screenshot),
+            filename: screenshot,
+            title: `Typed "${input}"`,
+          });
+        }
+      }
+    } else if (text.startsWith("move ")) {
+      const input = text.replace("move ", "").trim();
+      const validmoves = ["up", "down", "left", "right"];
+      const parts = input.split(" ");
+      if (parts.length !== 2 || !validmoves.includes(parts[0])) {
+        await say(`Invalid move command. Use "move <direction> <pixels>"`);
+      } else {
+        const direction = parts[0];
+        const pixels = parseInt(parts[1]);
+        if (isNaN(pixels) || pixels <= 0) {
+          await say(`Invalid pixel value: ${parts[1]}`);
+        } else {
+          let x = 0;
+          let y = 0;
+          switch (direction) {
+            case "up":
+              y = -pixels;
+              break;
+            case "down":
+              y = pixels;
+              break;
+            case "left":
+              x = -pixels;
+              break;
+            case "right":
+              x = pixels;
+              break;
+          }
+          const { moveMouse } = await import("./mouse");
+          await moveMouse(x, y);
+
+          await sleep(1000);
+          const screenshot = await printScreen();
+          if (screenshot) {
+            await app.client.files.uploadV2({
+              channel_id: msg.channel,
+              file: fs.createReadStream(screenshot),
+              filename: screenshot,
+              title: `Moved mouse ${direction} by ${pixels} pixels`,
+            });
+          } else {
+            await say("Failed to take screenshot after moving mouse.");
+          }
+        }
+      }
+    } else if (text.startsWith("click ")) {
+      const input = text.replace("click ", "").trim();
+      const validButtons = ["left", "right", "middle"];
+      if (!validButtons.includes(input)) {
+        await say(
+          `Invalid button "${input}". Use "left", "right", or "middle".`,
+        );
+      } else {
+        await clickMouse(input as "left" | "right" | "middle");
+
+        await sleep(1000);
+        const screenshot = await printScreen();
+        if (screenshot) {
+          await app.client.files.uploadV2({
+            channel_id: msg.channel,
+            file: fs.createReadStream(screenshot),
+            filename: screenshot,
+            title: `Clicked ${input} mouse button`,
+          });
+        } else {
+          await say("Failed to take screenshot after clicking mouse.");
+        }
+      }
+    } else {
+      await say(`Unknown command: ${text}`);
+    }
+  } catch (e) {
+    console.error(e);
+    await say(`Error: ${e}`);
+  } finally {
+    isProcessing = false;
+  }
 });
 
 (async () => {

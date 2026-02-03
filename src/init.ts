@@ -1,4 +1,5 @@
 import { sleep } from "bun";
+import { QmpCommand } from "./command";
 
 // init the qemu vm
 export default async function initVm() {
@@ -22,7 +23,7 @@ export default async function initVm() {
     sock.end();
     console.log("QEMU already running on port 4444, killing...");
     await killVm();
-    sleep(1000); // wait a second
+    await sleep(1000); // wait a second
   } catch {
     // nothing running
   }
@@ -85,13 +86,7 @@ export default async function initVm() {
 export async function killVm() {
   // kill qemu process on port 4444
   try {
-    const pids = Bun.spawnSync(["lsof", "-ti", ":4444"])
-      .stdout.toString()
-      .split("\n")
-      .filter(Boolean);
-    for (const pid of pids) {
-      Bun.spawnSync(["kill", "-9", pid]);
-    }
+    QmpCommand("quit");
     return 0;
   } catch (e) {
     throw new Error(`Failed to kill qemu: ${e}`);
