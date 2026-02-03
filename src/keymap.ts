@@ -55,6 +55,7 @@ const KEY_MAP: Record<string, string> = {
   "]": "bracket_right",
   "\\": "backslash",
   "`": "grave_accent",
+  '"': "quote_double",
 };
 
 const ALLOWED_KEYS = [...Object.keys(KEY_MAP), "a-z", "0-9"];
