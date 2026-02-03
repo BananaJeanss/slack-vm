@@ -2,6 +2,7 @@
   "name": "slack-vm",
   "module": "src/index.ts",
   "scripts": {
+    "setup-user": "bun run scripts/usersetup.ts",
     "start": "bun run src/index.ts"
   },
   "type": "module",

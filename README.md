@@ -20,7 +20,7 @@ Control a QEMU VM, through slack!
 | `restart`         | Votes to restart the VM.                                                                     | `restart`                 |
 | `uptime`          | Displays the bot and VM uptime.                                                              | `uptime`                  |
 
->[!NOTE]
+> [!NOTE]
 > You can add # in front of your messages for it to be ignored by the bot.
 
 ## Dev Setup
@@ -42,14 +42,20 @@ Requirements:
    qemu-img create arch.qcow 5G
    ```
 
-3. Create a `.env` file in the root directory, based on the `.env.example` file.
+3. (Optional) Setup a user for the bot to use (for security, includes iptables to block local network access)
+
+   ```bash
+   bun run setup-user
+   ```
+
+4. Create a `.env` file in the root directory, based on the `.env.example` file.
 
    ```bash
    cp .env.example .env
    nano .env
    ```
 
-4. Run the bot
+5. Run the bot
 
    ```bash
    bun start
