@@ -68,6 +68,10 @@ app.message("", async ({ message, say, client }) => {
     });
   }
 
+  function prefixUserid(title: string) {
+    return `@${msg.user} | ${title}`;
+  }
+
   if (
     !isReady ||
     msg.subtype === "bot_message" ||
@@ -116,7 +120,7 @@ app.message("", async ({ message, say, client }) => {
           channel_id: msg.channel,
           file: fs.createReadStream(filename),
           filename: filename,
-          title: `VM Screenshot | ${new Date().toISOString()}`,
+          title: prefixUserid(`VM Screenshot | ${new Date().toISOString()}`),
         });
       } else {
         await say("Failed to take screenshot.");
@@ -136,7 +140,7 @@ app.message("", async ({ message, say, client }) => {
             channel_id: msg.channel,
             file: fs.createReadStream(screenshot),
             filename: screenshot,
-            title: `Pressed ${input}`,
+            title: prefixUserid(`Pressed ${input}`),
           });
         }
       } else {
@@ -157,7 +161,7 @@ app.message("", async ({ message, say, client }) => {
             channel_id: msg.channel,
             file: fs.createReadStream(screenshot),
             filename: screenshot,
-            title: `Pressed ${input}`,
+            title: prefixUserid(`Pressed ${input}`),
           });
         }
       } else {
@@ -185,7 +189,7 @@ app.message("", async ({ message, say, client }) => {
             channel_id: msg.channel,
             file: fs.createReadStream(screenshot),
             filename: screenshot,
-            title: `Pressed combo ${input}`,
+            title: prefixUserid(`Pressed combo ${input}`),
           });
         }
       }
@@ -211,7 +215,7 @@ app.message("", async ({ message, say, client }) => {
             channel_id: msg.channel,
             file: fs.createReadStream(screenshot),
             filename: screenshot,
-            title: `Typed "${input}"`,
+            title: prefixUserid(`Typed "${input}"`),
           });
         }
       }
@@ -253,7 +257,7 @@ app.message("", async ({ message, say, client }) => {
               channel_id: msg.channel,
               file: fs.createReadStream(screenshot),
               filename: screenshot,
-              title: `Moved mouse ${direction} by ${pixels} pixels`,
+              title: prefixUserid(`Moved mouse ${direction} by ${pixels} pixels`),
             });
           } else {
             await say("Failed to take screenshot after moving mouse.");
@@ -277,7 +281,7 @@ app.message("", async ({ message, say, client }) => {
             channel_id: msg.channel,
             file: fs.createReadStream(screenshot),
             filename: screenshot,
-            title: `Clicked ${input} mouse button`,
+            title: prefixUserid(`Clicked ${input} mouse button`),
           });
         } else {
           await say("Failed to take screenshot after clicking mouse.");
