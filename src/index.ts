@@ -36,17 +36,22 @@ const VOTES_NEEDED = Number(Bun.env.RESTART_VOTES_NEEDED) || 3;
 app.message("", async ({ message, say, client }) => {
   const msg = message as any;
 
+  function reactWith(name: string) {
+    if (Bun.env.NOREACTIONS === "true") return;
+    client.reactions.add({
+      name: name,
+      channel: msg.channel,
+      timestamp: msg.ts,
+    });
+  }
+
   if (
     !isReady ||
     msg.subtype === "bot_message" ||
     msg.channel !== Bun.env.SLACK_CHANNEL_ID ||
     isProcessing
   ) {
-    client.reactions.add({
-      name: "no_entry_sign",
-      channel: msg.channel,
-      timestamp: msg.ts,
-    });
+    reactWith("no_entry_sign");
     return;
   }
 
@@ -62,20 +67,12 @@ app.message("", async ({ message, say, client }) => {
       : "[]",
   ) as string[];
   if (bannedUsers.includes(msg.user.toUpperCase())) {
-    client.reactions.add({
-      name: "no_entry_sign",
-      channel: msg.channel,
-      timestamp: msg.ts,
-    });
+    reactWith("no_entry_sign");
     return;
   }
 
   isProcessing = true;
-  client.reactions.add({
-    name: "hourglass_flowing_sand",
-    channel: msg.channel,
-    timestamp: msg.ts,
-  });
+  reactWith("hourglass_flowing_sand");
 
   try {
     if (text.includes("print")) {
