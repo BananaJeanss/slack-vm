@@ -6,7 +6,7 @@
     },
     "features": {
         "bot_user": {
-            "display_name": "Slack Plays",
+            "display_name": "Slack VM",
             "always_online": false
         }
     },

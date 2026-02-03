@@ -52,6 +52,24 @@ app.message("", async ({ message, say, client }) => {
 
   const text = msg.text?.toLowerCase().trim() || "";
 
+  // owner check
+  const isOwner = msg.user === Bun.env.SLACK_BOTADMIN_USERID;
+
+  // check if user is banned
+  const bannedUsers = JSON.parse(
+    fs.existsSync("./banned.json")
+      ? fs.readFileSync("./banned.json", "utf-8")
+      : "[]",
+  ) as string[];
+  if (bannedUsers.includes(msg.user.toUpperCase())) {
+    client.reactions.add({
+      name: "no_entry_sign",
+      channel: msg.channel,
+      timestamp: msg.ts,
+    });
+    return;
+  }
+
   isProcessing = true;
   client.reactions.add({
     name: "hourglass_flowing_sand",
@@ -251,6 +269,19 @@ app.message("", async ({ message, say, client }) => {
             title: `VM Restarted`,
           });
         }
+      } else if (isOwner) {
+        await say(`Admin restart triggered, restarting VM immediately.`);
+        votesForRestart = 0;
+        await restartVm();
+        const screenshot = await printScreen();
+        if (screenshot) {
+          await app.client.files.uploadV2({
+            channel_id: msg.channel,
+            file: fs.createReadStream(screenshot),
+            filename: screenshot,
+            title: `VM Restarted by Admin`,
+          });
+        }
       } else {
         await say(
           `Received ${votesForRestart} votes for restart. Need ${
@@ -265,6 +296,66 @@ app.message("", async ({ message, say, client }) => {
         // ignore
         isProcessing = false;
         return;
+      }
+      if (text.startsWith("ban")) {
+        // owner check
+        if (!isOwner) {
+          // ignore
+          isProcessing = false;
+          return;
+        } else {
+          // check if already banned
+          const parts = text.split(" ");
+          if (parts.length !== 2) {
+            await say(`Usage: ban <user_id>`);
+            isProcessing = false;
+            return;
+          }
+          const userIdToBan = parts[1].trim().toUpperCase();
+          if (bannedUsers.includes(userIdToBan)) {
+            await say(`User ${userIdToBan} is already banned.`);
+            isProcessing = false;
+            return;
+          }
+          bannedUsers.push(userIdToBan);
+          fs.writeFileSync(
+            "./banned.json",
+            JSON.stringify(bannedUsers, null, 2),
+          );
+          await say(`User ${userIdToBan} has been banned from using the bot.`);
+          isProcessing = false;
+          return;
+        }
+      }
+      if (text.startsWith("unban")) {
+        // owner check
+        if (!isOwner) {
+          // ignore
+          isProcessing = false;
+          return;
+        } else {
+          const parts = text.split(" ");
+          if (parts.length !== 2) {
+            await say(`Usage: unban <user_id>`);
+            isProcessing = false;
+            return;
+          }
+          const userIdToUnban = parts[1].trim().toUpperCase();
+          if (!bannedUsers.includes(userIdToUnban)) {
+            await say(`User ${userIdToUnban} is not banned.`);
+            isProcessing = false;
+            return;
+          }
+          const index = bannedUsers.indexOf(userIdToUnban);
+          bannedUsers.splice(index, 1);
+          fs.writeFileSync(
+            "./banned.json",
+            JSON.stringify(bannedUsers, null, 2),
+          );
+          await say(`User ${userIdToUnban} has been unbanned.`);
+          isProcessing = false;
+          return;
+        }
       }
       await say(`Unknown command: ${text}`);
     }
