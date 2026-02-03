@@ -11,5 +11,9 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "@slack/bolt": "^4.6.0",
+    "sharp": "^0.34.5"
   }
 }
