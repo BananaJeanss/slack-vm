@@ -52,7 +52,7 @@ export async function keyCombo(keys: string[]) {
   });
 }
 
-export async function keySequence(keys: string[], delay: number = 100) {
+export async function keySequence(keys: string[], delay: number = 20) {
   for (const key of keys) {
     const qemuKey = getQemuKey(key);
     if (qemuKey === null) {

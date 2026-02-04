@@ -5,7 +5,7 @@ import fs from "fs";
 import { getQemuKey } from "./keymap";
 import { keyCombo, keyPress, keyPressEnter, keySequence } from "./keypress";
 import { sleep } from "bun";
-import { clickMouse } from "./mouse";
+import { clickMouse, dragMouse, scrollMouse } from "./mouse";
 import { updateChannelCanvas } from "./canvas";
 
 // basic linux/qemu check
@@ -56,7 +56,7 @@ let isProcessing = false;
 type voteThing = {
   userId: string;
   timestamp: number;
-}
+};
 let votesForRestart: voteThing[] = [];
 const VOTES_NEEDED = Number(Bun.env.RESTART_VOTES_NEEDED) || 3;
 
@@ -77,7 +77,7 @@ app.message("", async ({ message, say, client }) => {
   }
 
   function addVote(userId: string): boolean {
-    const existingVote = votesForRestart.find(vote => vote.userId === userId);
+    const existingVote = votesForRestart.find((vote) => vote.userId === userId);
     if (existingVote) {
       return false; // already voted
     } else {
@@ -214,6 +214,12 @@ app.message("", async ({ message, say, client }) => {
     } else if (text.startsWith("type ")) {
       const input = rawText.slice(5);
       let allValid = true;
+      // reasonable limit
+      if (input.length > 256) {
+        await say(`Input too long. Max 256 characters.`);
+        isProcessing = false;
+        return;
+      }
       for (const char of input) {
         const qemuKey = getQemuKey(char);
         if (qemuKey === null) {
@@ -275,7 +281,9 @@ app.message("", async ({ message, say, client }) => {
               channel_id: msg.channel,
               file: fs.createReadStream(screenshot),
               filename: screenshot,
-              title: prefixUserid(`Moved mouse ${direction} by ${pixels} pixels`),
+              title: prefixUserid(
+                `Moved mouse ${direction} by ${pixels} pixels`,
+              ),
             });
           } else {
             await say("Failed to take screenshot after moving mouse.");
@@ -348,6 +356,87 @@ app.message("", async ({ message, say, client }) => {
         );
         isProcessing = false;
         return;
+      }
+    } else if (text.startsWith("scroll ")) {
+      const input = text.replace("scroll ", "").trim();
+      const amount = parseInt(input);
+      if (isNaN(amount) || amount === 0) {
+        await say(
+          `Invalid scroll amount: "${input}". Use a non-zero integer, e.g. "scroll 3" or "scroll -2".`,
+        );
+      } else {
+        await scrollMouse(amount);
+
+        await sleep(1000);
+        const screenshot = await printScreen();
+        if (screenshot) {
+          await app.client.files.uploadV2({
+            channel_id: msg.channel,
+            file: fs.createReadStream(screenshot),
+            filename: screenshot,
+            title: prefixUserid(`Scrolled mouse by ${amount}`),
+          });
+        } else {
+          await say("Failed to take screenshot after scrolling mouse.");
+        }
+      }
+    } else if (text.startsWith("drag ")) {
+      const input = text.replace("drag ", "").trim();
+      const parts = input.split(" ");
+      if (parts.length !== 3) {
+        await say(
+          `Invalid drag command. Use "drag <button> <direction> <pixels>"`,
+        );
+      } else {
+        const button = parts[0];
+        const direction = parts[1];
+        const pixels = parseInt(parts[2]);
+        const validButtons = ["left", "right", "middle"];
+        const validDirections = ["up", "down", "left", "right"];
+        if (!validButtons.includes(button)) {
+          await say(
+            `Invalid button "${button}". Use "left", "right", or "middle".`,
+          );
+        } else if (!validDirections.includes(direction)) {
+          await say(
+            `Invalid direction "${direction}". Use "up", "down", "left", or "right".`,
+          );
+        } else if (isNaN(pixels) || pixels <= 0) {
+          await say(`Invalid pixel value: ${parts[2]}`);
+        } else {
+          let x = 0;
+          let y = 0;
+          switch (direction) {
+            case "up":
+              y = -pixels;
+              break;
+            case "down":
+              y = pixels;
+              break;
+            case "left":
+              x = -pixels;
+              break;
+            case "right":
+              x = pixels;
+              break;
+          }
+          await dragMouse(button as "left" | "right" | "middle", x, y);
+
+          await sleep(1000);
+          const screenshot = await printScreen();
+          if (screenshot) {
+            await app.client.files.uploadV2({
+              channel_id: msg.channel,
+              file: fs.createReadStream(screenshot),
+              filename: screenshot,
+              title: prefixUserid(
+                `Dragged mouse with ${button} button to (${x}, ${y})`,
+              ),
+            });
+          } else {
+            await say("Failed to take screenshot after dragging mouse.");
+          }
+        }
       }
     } else {
       if (text.startsWith("#")) {
@@ -466,6 +555,12 @@ app.message("", async ({ message, say, client }) => {
   isReady = true;
   // update channel canvas
   updateChannelCanvas(app);
+  setInterval(
+    () => {
+      updateChannelCanvas(app);
+    },
+    1000 * 60 * 60 * 12,
+  ); // every 12 hours
 })();
 
 process.on("SIGINT", async () => {
