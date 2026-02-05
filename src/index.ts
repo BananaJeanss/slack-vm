@@ -4,6 +4,7 @@ import fs from "fs";
 import { updateChannelCanvas } from "./canvas";
 import { reactWith } from "./commandtools";
 import path from "path";
+import type { CommandModule, SlackMessage } from "./types";
 
 // basic linux/qemu check
 if (process.platform !== "linux") {
@@ -36,7 +37,7 @@ try {
   } else {
     // good
   }
-} catch (e) {
+} catch {
   // good
 }
 
@@ -50,25 +51,10 @@ const app = new App({
 let isReady = false;
 let isProcessing = false;
 
-type voteThing = {
-  userId: string;
-  timestamp: number;
-};
-
-interface CommandModule {
-  trigger: string[]; // can be multiple triggers for the same handler
-  handler: (
-    args: string[],
-    say: Function,
-    msg: any,
-    app?: any,
-  ) => Promise<void>;
-}
-
 const commandModules: CommandModule[] = [];
 
 app.message("", async ({ message, say, client }) => {
-  const msg = message as any;
+  const msg = message as SlackMessage;
 
   if (
     !isReady ||
@@ -91,9 +77,6 @@ app.message("", async ({ message, say, client }) => {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'");
   const text = rawText.toLowerCase();
-
-  // owner check
-  const isOwner = msg.user === Bun.env.SLACK_BOTADMIN_USERID;
 
   // check if user is banned
   const bannedUsers = JSON.parse(

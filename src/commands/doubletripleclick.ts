@@ -3,10 +3,11 @@ import { bomboclatClick } from "../mouse";
 import printScreen from "../print";
 import { prefixUserid } from "../commandtools";
 import { sleep } from "bun";
+import type { CommandModule } from "../types";
 
-export default {
+const doubleTripleClickCommand: CommandModule = {
   trigger: ["doubleclick", "tripleclick"],
-  handler: async (args: string[], say: any, msg: any, app: any) => {
+  handler: async (args, say, msg, app) => {
     const text = args.join(" ");
     if (text.startsWith("doubleclick ") || text.startsWith("tripleclick ")) {
       const doubleOrTriple = text.startsWith("doubleclick ") ? 2 : 3;
@@ -43,3 +44,5 @@ export default {
     }
   },
 };
+
+export default doubleTripleClickCommand;

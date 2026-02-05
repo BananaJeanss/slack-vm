@@ -3,10 +3,11 @@ import { dragMouse } from "../mouse";
 import printScreen from "../print";
 import fs from "fs";
 import { prefixUserid } from "../commandtools";
+import type { CommandHandler } from "../types";
 
 export default {
   trigger: ["drag"],
-  handler: async (args: string[], say: any, msg: any, app: any) => {
+  handler: (async (args, say, msg, app) => {
     const [button, direction, pixelsStr] = args;
 
     const validButtons = ["left", "right", "middle"];
@@ -66,5 +67,5 @@ export default {
     } else {
       await say("Failed to take screenshot after dragging mouse.");
     }
-  },
+  }) as CommandHandler,
 };

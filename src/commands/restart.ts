@@ -1,9 +1,9 @@
 import { restartVm } from "../init";
 import fs from "fs";
 import printScreen from "../print";
+import type { CommandHandler } from "../types";
 
 let votesForRestart: { userId: string; timestamp: number }[] = [];
-let isProcessing = false;
 const VOTES_NEEDED = Number(Bun.env.RESTART_VOTES_NEEDED) || 3;
 
 function addVote(userId: string): boolean {
@@ -22,7 +22,7 @@ function clearAllVotes() {
 
 export default {
   trigger: ["restart"],
-  handler: async (args: string[], say: any, msg: any, app: any) => {
+  handler: (async (args, say, msg, app) => {
     const isOwner = msg.user === Bun.env.SLACK_BOTADMIN_USERID;
     if (isOwner) {
       await say(`Admin restart triggered, restarting VM immediately.`);
@@ -43,7 +43,6 @@ export default {
     const voteAdded = addVote(msg.user);
     if (!voteAdded) {
       await say(`You have already voted for a restart.`);
-      isProcessing = false;
       return;
     }
     if (votesForRestart.length >= VOTES_NEEDED) {
@@ -67,8 +66,7 @@ export default {
           VOTES_NEEDED - votesForRestart.length
         } more votes to restart.`,
       );
-      isProcessing = false;
       return;
     }
-  },
+  }) as CommandHandler,
 };

@@ -4,10 +4,11 @@ import { getQemuKey } from "../keymap";
 import printScreen from "../print";
 import fs from "fs";
 import { prefixUserid } from "../commandtools";
+import type { CommandHandler } from "../types";
 
 export default {
   trigger: ["type"],
-  handler: async (args: string[], say: any, msg: any, app: any) => {
+  handler: (async (args, say, msg, app) => {
     const rawText = args.join(" ");
     if (!rawText) {
       await say(`Please provide text to type. Usage: \`type <text>\``);
@@ -43,5 +44,5 @@ export default {
         });
       }
     }
-  },
+  }) as CommandHandler,
 };

@@ -1,8 +1,9 @@
+import type { CommandModule } from "../types";
 import { vmUpSince } from "../init";
 
-export default {
+const uptimeCommand: CommandModule = {
   trigger: ["uptime"],
-  handler: async (args: string[], say: any, msg: any) => {
+  handler: async (args, say) => {
     const uptimeMs = process.uptime() * 1000;
     const uptimeDays = Math.floor(uptimeMs / (1000 * 60 * 60 * 24));
     const uptimeHours = Math.floor(
@@ -28,4 +29,4 @@ export default {
     );
     
   },
-};
+};export default uptimeCommand;

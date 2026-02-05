@@ -11,7 +11,9 @@ export default async function printScreen(): Promise<string | null> {
   try {
     try {
       fs.mkdirSync("./screenshots");
-    } catch (e) {}
+    } catch {
+      // dir already exists
+    }
 
     await QmpCommand("screendump", { filename: ppmPath });
 

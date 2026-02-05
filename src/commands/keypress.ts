@@ -5,10 +5,11 @@ import printScreen from "../print";
 import fs from "fs";
 import { prefixUserid } from "../commandtools";
 import { sleep } from "bun";
+import type { CommandHandler } from "../types";
 
 export default {
   trigger: ["keypress"],
-  handler: async (args: string[], say: any, msg: any, app: any) => {
+  handler: (async (args, say, msg, app) => {
     const text = args.join(" ");
     const input = text.replace("keypress ", "").trim();
     const qemuKey = getQemuKey(input);
@@ -30,5 +31,5 @@ export default {
     } else {
       await say(`Key "${input}" not recognized.`);
     }
-  },
+  }) as CommandHandler,
 };

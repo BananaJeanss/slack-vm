@@ -1,27 +1,30 @@
-export async function QmpCommand(command: string, args: any = {}) {
-  return new Promise<any>(async (resolve, reject) => {
+export async function QmpCommand<T = unknown>(
+  command: string,
+  args: Record<string, unknown> = {},
+) {
+  return new Promise<T>((resolve, reject) => {
     try {
-      const socket = await Bun.connect({
+      Bun.connect({
         hostname: "localhost",
         port: 4444,
         socket: {
-          data(socket, data) {
+          data(sock, data) {
             const resp = data.toString();
             if (resp.includes("QMP")) {
               // greeting
-              socket.write(
+              sock.write(
                 JSON.stringify({ execute: "qmp_capabilities" }) + "\n",
               );
-              socket.write(
+              sock.write(
                 JSON.stringify({ execute: command, arguments: args }) + "\n",
               );
             } else if (resp.includes("return")) {
               // response
               resolve(JSON.parse(resp));
-              socket.end();
+              sock.end();
             }
           },
-          error(socket, error) {
+          error(_socket, error) {
             reject(`QMP socket error: ${error}`);
           },
         },

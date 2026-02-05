@@ -42,11 +42,13 @@ export async function updateChannelCanvas(app: App) {
       canvas_id: canvasId,
       changes: [
         {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           operation: "rename" as any,
           title_content: {
             type: "markdown",
             markdown: "README.md",
           },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any,
       ],
     });

@@ -4,10 +4,11 @@ import { keyCombo } from "../keypress";
 import { sleep } from "bun";
 import printScreen from "../print";
 import { prefixUserid } from "../commandtools";
+import type { CommandHandler } from "../types";
 
 export default {
   trigger: ["combo"],
-  handler: async (args: string[], say: any, msg: any, app: any) => {
+  handler: (async (args, say, msg, app) => {
     const text = args.join(" ");
     const input = text.replace("combo ", "").trim();
     const keys = input.split("+").map((k: string) => k.trim());
@@ -34,5 +35,5 @@ export default {
         });
       }
     }
-  },
+  }) as CommandHandler,
 };

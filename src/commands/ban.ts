@@ -1,10 +1,11 @@
 import fs from "fs";
 import { reactWith } from "../commandtools";
+import type { CommandModule } from "../types";
 
-export default {
+const banCommand: CommandModule = {
   trigger: ["ban", "unban"],
-  handler: async (args: string[], say: any, msg: any, app: any) => {
-    const commandName = msg.text.trim().split(" ")[0].toLowerCase();
+  handler: async (args, say, msg, app) => {
+    const commandName = msg.text?.trim().split(" ")[0].toLowerCase() || "";
     const targetUserId = args[0] ? args[0].trim().toUpperCase() : null;
 
     const isOwner = msg.user === Bun.env.SLACK_BOTADMIN_USERID;
@@ -43,3 +44,5 @@ export default {
     }
   },
 };
+
+export default banCommand;

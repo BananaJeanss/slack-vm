@@ -4,11 +4,11 @@ import { sleep } from "bun";
 import printScreen from "../print";
 import fs from "fs";
 import { prefixUserid } from "../commandtools";
+import type { CommandModule } from "../types";
 
-
-export default {
+const keyCommand: CommandModule = {
   trigger: ["key"],
-  handler: async (args: string[], say: any, msg: any, app: any) => {
+  handler: async (args, say, msg, app) => {
     let input = args.join(" ").replace("key ", "").trim();
     const parts = input.split(" "); // check if last part is a duration
     let duration: number = 50;
@@ -44,3 +44,4 @@ export default {
     }
   },
 };
+export default keyCommand;

@@ -3,10 +3,11 @@ import fs from "fs";
 import { prefixUserid } from "../commandtools";
 import { sleep } from "bun";
 import { moveMouse } from "../mouse";
+import type { CommandHandler } from "../types";
 
 export default {
   trigger: ["move"],
-  handler: async (args: string[], say: any, msg: any, app: any) => {
+  handler: (async (args, say, msg, app) => {
     const validmoves = ["up", "down", "left", "right"];
     
     const [direction, pixelsStr] = args;
@@ -58,5 +59,5 @@ export default {
     } else {
       await say("Failed to take screenshot after moving mouse.");
     }
-  },
+  }) as CommandHandler,
 };

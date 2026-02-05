@@ -1,10 +1,11 @@
 import printScreen from "../print";
 import fs from "fs";
 import { prefixUserid } from "../commandtools";
+import type { CommandHandler } from "../types";
 
 export default {
   trigger: ["print", "screenshot"],
-  handler: async (args: string[], say: any, msg: any, app: any) => {
+  handler: (async (args, say, msg, app) => {
     const filename = await printScreen();
     if (filename) {
       await app.client.files.uploadV2({
@@ -16,5 +17,5 @@ export default {
     } else {
       await say("Failed to take screenshot.");
     }
-  },
+  }) as CommandHandler,
 };

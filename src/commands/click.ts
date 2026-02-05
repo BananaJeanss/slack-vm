@@ -3,10 +3,11 @@ import printScreen from "../print";
 import fs from "fs";
 import { sleep } from "bun";
 import { prefixUserid } from "../commandtools";
+import type { CommandHandler } from "../types";
 
 export default {
   trigger: ["click"],
-  handler: async (args: string[], say: any, msg: any, app: any) => {
+  handler: (async (args, say, msg, app) => {
     const text = args.join(" ");
     const input = text.replace("click ", "").trim();
     const validButtons = ["left", "right", "middle"];
@@ -28,5 +29,5 @@ export default {
         await say("Failed to take screenshot after clicking mouse.");
       }
     }
-  },
+  }) as CommandHandler,
 };

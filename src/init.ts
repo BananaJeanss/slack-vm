@@ -30,7 +30,7 @@ export default async function initVm() {
     // nothing running
   }
 
-  let args = [
+  const args = [
     "-enable-kvm",
     "-display",
     `${Bun.env.ENABLE_VNC_SERVER === "true" ? "vnc=127.0.0.1:0" : "none"}`,

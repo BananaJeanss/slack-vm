@@ -51,8 +51,12 @@ function setupUser() {
       console.log(
         `Iptables rule added: Block ${USERNAME} from ${BLOCKED_SUBNET}`,
       );
-    } catch (e: any) {
-      console.error("Failed to set iptables rule:", e.message);
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        console.error("Failed to set iptables rule:", e.message);
+      } else {
+        console.error("Failed to set iptables rule:", e);
+      }
       process.exit(1);
     }
   }
@@ -92,8 +96,12 @@ function setupPermissions() {
       execute(`setfacl -m u:${USERNAME}:x "${currentPath}"`);
     }
     console.log("Parent directory traversal permissions granted via ACL.");
-  } catch (e: any) {
-    console.error("Failed to set permissions:", e.message);
+  } catch (e: unknown) {
+    if (e instanceof Error) {
+      console.error("Failed to set permissions:", e.message);
+    } else {
+      console.error("Failed to set permissions:", e);
+    }
     process.exit(1);
   }
 }
