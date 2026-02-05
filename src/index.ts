@@ -1,12 +1,9 @@
 import { App } from "@slack/bolt";
-import initVm, { killVm, restartVm, vmUpSince } from "./init";
-import printScreen from "./print";
+import initVm, { killVm } from "./init";
 import fs from "fs";
-import { getQemuKey } from "./keymap";
-import { keyCombo, keyPress, keyPressEnter, keySequence } from "./keypress";
-import { sleep } from "bun";
-import { bomboclatClick, clickMouse, dragMouse, scrollMouse } from "./mouse";
 import { updateChannelCanvas } from "./canvas";
+import { reactWith } from "./commandtools";
+import path from "path";
 
 // basic linux/qemu check
 if (process.platform !== "linux") {
@@ -57,39 +54,21 @@ type voteThing = {
   userId: string;
   timestamp: number;
 };
-let votesForRestart: voteThing[] = [];
-const VOTES_NEEDED = Number(Bun.env.RESTART_VOTES_NEEDED) || 3;
 
-// old commands
+interface CommandModule {
+  trigger: string[]; // can be multiple triggers for the same handler
+  handler: (
+    args: string[],
+    say: Function,
+    msg: any,
+    app?: any,
+  ) => Promise<void>;
+}
+
+const commandModules: CommandModule[] = [];
+
 app.message("", async ({ message, say, client }) => {
   const msg = message as any;
-
-  function reactWith(name: string) {
-    if (Bun.env.NOREACTIONS === "true") return;
-    client.reactions.add({
-      name: name,
-      channel: msg.channel,
-      timestamp: msg.ts,
-    });
-  }
-
-  function prefixUserid(title: string) {
-    return `@${msg.user} | ${title}`;
-  }
-
-  function addVote(userId: string): boolean {
-    const existingVote = votesForRestart.find((vote) => vote.userId === userId);
-    if (existingVote) {
-      return false; // already voted
-    } else {
-      votesForRestart.push({ userId, timestamp: Date.now() });
-      return true; // vote added
-    }
-  }
-
-  function clearAllVotes() {
-    votesForRestart = [];
-  }
 
   if (
     !isReady ||
@@ -99,12 +78,11 @@ app.message("", async ({ message, say, client }) => {
     msg.channel !== Bun.env.SLACK_CHANNEL_ID ||
     isProcessing
   ) {
-    reactWith("no_entry_sign");
+    reactWith("no_entry_sign", msg, client);
     return;
   }
 
   let rawText = msg.text?.trim() || "";
-
   rawText = rawText
     .replace(/<http[s]?:\/\/[^|>]+\|([^>]+)>|<(http[s]?:\/\/[^>]+)>/g, "$1$2")
     .replace(/&gt;/g, ">")
@@ -124,459 +102,24 @@ app.message("", async ({ message, say, client }) => {
       : "[]",
   ) as string[];
   if (bannedUsers.includes(msg.user.toUpperCase())) {
-    reactWith("no_entry_sign");
+    reactWith("no_entry_sign", msg, client);
     return;
   }
 
   isProcessing = true;
-  reactWith("hourglass_flowing_sand");
+  reactWith("hourglass_flowing_sand", msg, client);
+
+  const commandName = text.split(" ")[0];
 
   try {
-    if (text.includes("print")) {
-      const filename = await printScreen();
-      if (filename) {
-        await app.client.files.uploadV2({
-          channel_id: msg.channel,
-          file: fs.createReadStream(filename),
-          filename: filename,
-          title: prefixUserid(`VM Screenshot | ${new Date().toISOString()}`),
-        });
-      } else {
-        await say("Failed to take screenshot.");
-      }
-    } else if (text.startsWith("key ")) {
-      let input = text.replace("key ", "").trim();
-      const parts = input.split(" "); // check if last part is a duration
-      let duration: number = 50;
-      if (parts.length > 1) {
-        const possibleDuration = parts[parts.length - 1];
-        const parsedDuration = parseInt(possibleDuration);
-        if (!isNaN(parsedDuration)) {
-          duration = parsedDuration;
-          input = parts.slice(0, -1).join(" ");
-        }
-      }
-
-      const qemuKey = getQemuKey(input);
-
-      if (qemuKey) {
-        await keyPress(input, duration);
-        // delay to let the OS react before screenshotting
-        await sleep(1000);
-
-        const screenshot = await printScreen();
-        if (screenshot) {
-          await app.client.files.uploadV2({
-            channel_id: msg.channel,
-            file: fs.createReadStream(screenshot),
-            filename: screenshot,
-            title: prefixUserid(`Pressed ${input}`),
-          });
-        }
-      } else {
-        await say(`Key "${input}" not recognized.`);
-      }
-    } else if (text.startsWith("keypress ")) {
-      const input = text.replace("keypress ", "").trim();
-      const qemuKey = getQemuKey(input);
-
-      if (qemuKey) {
-        await keyPressEnter(input);
-        // delay to let the OS react before screenshotting
-        await sleep(1000);
-
-        const screenshot = await printScreen();
-        if (screenshot) {
-          await app.client.files.uploadV2({
-            channel_id: msg.channel,
-            file: fs.createReadStream(screenshot),
-            filename: screenshot,
-            title: prefixUserid(`Pressed ${input}`),
-          });
-        }
-      } else {
-        await say(`Key "${input}" not recognized.`);
-      }
-    } else if (text.startsWith("combo ")) {
-      const input = text.replace("combo ", "").trim();
-      const keys = input.split("+").map((k: string) => k.trim());
-      let allValid = true;
-      for (const key of keys) {
-        if (getQemuKey(key) === null) {
-          allValid = false;
-          await say(`Key "${key}" not recognized.`);
-          break;
-        }
-      }
-      if (allValid) {
-        await keyCombo(keys);
-        // delay to let the OS react before screenshotting
-        await sleep(1000);
-
-        const screenshot = await printScreen();
-        if (screenshot) {
-          await app.client.files.uploadV2({
-            channel_id: msg.channel,
-            file: fs.createReadStream(screenshot),
-            filename: screenshot,
-            title: prefixUserid(`Pressed combo ${input}`),
-          });
-        }
-      }
-    } else if (text.startsWith("type ")) {
-      const input = rawText.slice(5);
-      let allValid = true;
-      // reasonable limit
-      if (input.length > 256) {
-        await say(`Input too long. Max 256 characters.`);
-        isProcessing = false;
-        return;
-      }
-      for (const char of input) {
-        const qemuKey = getQemuKey(char);
-        if (qemuKey === null) {
-          allValid = false;
-          await say(`Character "${char}" not recognized.`);
-          break;
-        }
-      }
-      if (allValid) {
-        await keySequence(input.split(""));
-        // delay to let the OS react before screenshotting
-        await sleep(1000);
-
-        const screenshot = await printScreen();
-        if (screenshot) {
-          await app.client.files.uploadV2({
-            channel_id: msg.channel,
-            file: fs.createReadStream(screenshot),
-            filename: screenshot,
-            title: prefixUserid(`Typed "${input}"`),
-          });
-        }
-      }
-    } else if (text.startsWith("move ")) {
-      const input = text.replace("move ", "").trim();
-      const validmoves = ["up", "down", "left", "right"];
-      const parts = input.split(" ");
-      if (parts.length !== 2 || !validmoves.includes(parts[0])) {
-        await say(`Invalid move command. Use "move <direction> <pixels>"`);
-      } else {
-        const direction = parts[0];
-        const pixels = parseInt(parts[1]);
-        if (isNaN(pixels) || pixels <= 0) {
-          await say(`Invalid pixel value: ${parts[1]}`);
-        } else {
-          let x = 0;
-          let y = 0;
-          switch (direction) {
-            case "up":
-              y = -pixels;
-              break;
-            case "down":
-              y = pixels;
-              break;
-            case "left":
-              x = -pixels;
-              break;
-            case "right":
-              x = pixels;
-              break;
-          }
-          const { moveMouse } = await import("./mouse");
-          await moveMouse(x, y);
-
-          await sleep(1000);
-          const screenshot = await printScreen();
-          if (screenshot) {
-            await app.client.files.uploadV2({
-              channel_id: msg.channel,
-              file: fs.createReadStream(screenshot),
-              filename: screenshot,
-              title: prefixUserid(
-                `Moved mouse ${direction} by ${pixels} pixels`,
-              ),
-            });
-          } else {
-            await say("Failed to take screenshot after moving mouse.");
-          }
-        }
-      }
-    } else if (text.startsWith("click ")) {
-      const input = text.replace("click ", "").trim();
-      const validButtons = ["left", "right", "middle"];
-      if (!validButtons.includes(input)) {
-        await say(
-          `Invalid button "${input}". Use "left", "right", or "middle".`,
-        );
-      } else {
-        await clickMouse(input as "left" | "right" | "middle");
-
-        await sleep(1000);
-        const screenshot = await printScreen();
-        if (screenshot) {
-          await app.client.files.uploadV2({
-            channel_id: msg.channel,
-            file: fs.createReadStream(screenshot),
-            filename: screenshot,
-            title: prefixUserid(`Clicked ${input} mouse button`),
-          });
-        } else {
-          await say("Failed to take screenshot after clicking mouse.");
-        }
-      }
-    } else if (text === "restart") {
-      const voteAdded = addVote(msg.user);
-      if (!voteAdded) {
-        await say(`You have already voted for a restart.`);
-        isProcessing = false;
-        return;
-      }
-      if (votesForRestart.length >= VOTES_NEEDED) {
-        await say(
-          `Received ${votesForRestart.length}/${VOTES_NEEDED} votes for restart. Restarting VM...`,
-        );
-        clearAllVotes();
-        await restartVm();
-        const screenshot = await printScreen();
-        if (screenshot) {
-          await app.client.files.uploadV2({
-            channel_id: msg.channel,
-            file: fs.createReadStream(screenshot),
-            filename: screenshot,
-            title: `VM Restarted`,
-          });
-        }
-      } else if (isOwner) {
-        await say(`Admin restart triggered, restarting VM immediately.`);
-        clearAllVotes();
-        await restartVm();
-        const screenshot = await printScreen();
-        if (screenshot) {
-          await app.client.files.uploadV2({
-            channel_id: msg.channel,
-            file: fs.createReadStream(screenshot),
-            filename: screenshot,
-            title: `VM Restarted by Admin`,
-          });
-        }
-      } else {
-        await say(
-          `Received ${votesForRestart.length} votes for restart. Need ${
-            VOTES_NEEDED - votesForRestart.length
-          } more votes to restart.`,
-        );
-        isProcessing = false;
-        return;
-      }
-    } else if (text.startsWith("scroll ")) {
-      const input = text.replace("scroll ", "").trim();
-      const amount = parseInt(input);
-      if (isNaN(amount) || amount === 0) {
-        await say(
-          `Invalid scroll amount: "${input}". Use a non-zero integer, e.g. "scroll 3" or "scroll -2".`,
-        );
-      } else {
-        await scrollMouse(amount);
-
-        await sleep(1000);
-        const screenshot = await printScreen();
-        if (screenshot) {
-          await app.client.files.uploadV2({
-            channel_id: msg.channel,
-            file: fs.createReadStream(screenshot),
-            filename: screenshot,
-            title: prefixUserid(`Scrolled mouse by ${amount}`),
-          });
-        } else {
-          await say("Failed to take screenshot after scrolling mouse.");
-        }
-      }
-    } else if (text.startsWith("drag ")) {
-      const input = text.replace("drag ", "").trim();
-      const parts = input.split(" ");
-      if (parts.length !== 3) {
-        await say(
-          `Invalid drag command. Use "drag <button> <direction> <pixels>"`,
-        );
-      } else {
-        const button = parts[0];
-        const direction = parts[1];
-        const pixels = parseInt(parts[2]);
-        const validButtons = ["left", "right", "middle"];
-        const validDirections = ["up", "down", "left", "right"];
-        if (!validButtons.includes(button)) {
-          await say(
-            `Invalid button "${button}". Use "left", "right", or "middle".`,
-          );
-        } else if (!validDirections.includes(direction)) {
-          await say(
-            `Invalid direction "${direction}". Use "up", "down", "left", or "right".`,
-          );
-        } else if (isNaN(pixels) || pixels <= 0) {
-          await say(`Invalid pixel value: ${parts[2]}`);
-        } else {
-          let x = 0;
-          let y = 0;
-          switch (direction) {
-            case "up":
-              y = -pixels;
-              break;
-            case "down":
-              y = pixels;
-              break;
-            case "left":
-              x = -pixels;
-              break;
-            case "right":
-              x = pixels;
-              break;
-          }
-          await dragMouse(button as "left" | "right" | "middle", x, y);
-
-          await sleep(1000);
-          const screenshot = await printScreen();
-          if (screenshot) {
-            await app.client.files.uploadV2({
-              channel_id: msg.channel,
-              file: fs.createReadStream(screenshot),
-              filename: screenshot,
-              title: prefixUserid(
-                `Dragged mouse with ${button} button to (${x}, ${y})`,
-              ),
-            });
-          } else {
-            await say("Failed to take screenshot after dragging mouse.");
-          }
-        }
-      }
-    } else if (
-      text.startsWith("doubleclick ") ||
-      text.startsWith("tripleclick ")
-    ) {
-      const doubleOrTriple = text.startsWith("doubleclick ") ? 2 : 3;
-      const input = text
-        .replace(doubleOrTriple === 2 ? "doubleclick " : "tripleclick ", "")
-        .trim();
-      const validButtons = ["left", "right", "middle"];
-      if (!validButtons.includes(input)) {
-        await say(
-          `Invalid button "${input}". Use "left", "right", or "middle".`,
-        );
-      } else {
-        await bomboclatClick(
-          input as "left" | "right" | "middle",
-          doubleOrTriple,
-        );
-      }
-      await sleep(1000);
-      const screenshot = await printScreen();
-      if (screenshot) {
-        await app.client.files.uploadV2({
-          channel_id: msg.channel,
-          file: fs.createReadStream(screenshot),
-          filename: screenshot,
-          title: prefixUserid(
-            `${doubleOrTriple === 2 ? "Double" : "Triple"} clicked ${input} mouse button`,
-          ),
-        });
-      } else {
-        await say(
-          `Failed to take screenshot after ${doubleOrTriple === 2 ? "double" : "triple"} clicking mouse.`,
-        );
-      }
+    // check if command matches any module
+    const module = commandModules.find((mod) =>
+      mod.trigger.includes(commandName),
+    );
+    if (module) {
+      await module.handler(text.split(" ").slice(1), say, msg, app);
     } else {
       if (text.startsWith("#")) {
-        // ignore
-        isProcessing = false;
-        return;
-      }
-      if (text.startsWith("ban")) {
-        // owner check
-        if (!isOwner) {
-          // ignore
-          isProcessing = false;
-          return;
-        } else {
-          // check if already banned
-          const parts = text.split(" ");
-          if (parts.length !== 2) {
-            await say(`Usage: ban <user_id>`);
-            isProcessing = false;
-            return;
-          }
-          const userIdToBan = parts[1].trim().toUpperCase();
-          if (bannedUsers.includes(userIdToBan)) {
-            await say(`User ${userIdToBan} is already banned.`);
-            isProcessing = false;
-            return;
-          }
-          bannedUsers.push(userIdToBan);
-          fs.writeFileSync(
-            "./banned.json",
-            JSON.stringify(bannedUsers, null, 2),
-          );
-          await say(`User ${userIdToBan} has been banned from using the bot.`);
-          isProcessing = false;
-          return;
-        }
-      }
-      if (text.startsWith("unban")) {
-        // owner check
-        if (!isOwner) {
-          // ignore
-          isProcessing = false;
-          return;
-        } else {
-          const parts = text.split(" ");
-          if (parts.length !== 2) {
-            await say(`Usage: unban <user_id>`);
-            isProcessing = false;
-            return;
-          }
-          const userIdToUnban = parts[1].trim().toUpperCase();
-          if (!bannedUsers.includes(userIdToUnban)) {
-            await say(`User ${userIdToUnban} is not banned.`);
-            isProcessing = false;
-            return;
-          }
-          const index = bannedUsers.indexOf(userIdToUnban);
-          bannedUsers.splice(index, 1);
-          fs.writeFileSync(
-            "./banned.json",
-            JSON.stringify(bannedUsers, null, 2),
-          );
-          await say(`User ${userIdToUnban} has been unbanned.`);
-          isProcessing = false;
-          return;
-        }
-      }
-      if (text === "uptime") {
-        // proc uptime
-        const uptimeMs = process.uptime() * 1000;
-        const uptimeDays = Math.floor(uptimeMs / (1000 * 60 * 60 * 24));
-        const uptimeHours = Math.floor(
-          (uptimeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
-        );
-        const uptimeMinutes = Math.floor(
-          (uptimeMs % (1000 * 60 * 60)) / (1000 * 60),
-        );
-        const uptimeSeconds = Math.floor((uptimeMs % (1000 * 60)) / 1000);
-
-        // vm uptime
-        const vmUptimeMs = Date.now() - vmUpSince;
-        const vmUptimeDays = Math.floor(vmUptimeMs / (1000 * 60 * 60 * 24));
-        const vmUptimeHours = Math.floor(
-          (vmUptimeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
-        );
-        const vmUptimeMinutes = Math.floor(
-          (vmUptimeMs % (1000 * 60 * 60)) / (1000 * 60),
-        );
-        const vmUptimeSeconds = Math.floor((vmUptimeMs % (1000 * 60)) / 1000);
-
-        await say(
-          `Bun uptime: ${uptimeDays}d ${uptimeHours}h ${uptimeMinutes}m ${uptimeSeconds}s\nVM uptime: ${vmUptimeDays}d ${vmUptimeHours}h ${vmUptimeMinutes}m ${vmUptimeSeconds}s`,
-        );
         isProcessing = false;
         return;
       }
@@ -590,26 +133,54 @@ app.message("", async ({ message, say, client }) => {
   }
 });
 
-// i cba to work on new command handler rn i'll prolly do it later
-
 (async () => {
-  // init vm first
+  console.log("Initializing...");
+
+  // load commands
+  const commandsPath = path.join(import.meta.dir, "commands");
+  
+  // Check if directory exists to avoid crash
+  if (fs.existsSync(commandsPath)) {
+    const files = fs.readdirSync(commandsPath).filter((file) => file.endsWith(".ts"));
+
+    for (const file of files) {
+      const filePath = path.join(commandsPath, file);
+      try {
+        // await the import so we know it's loaded
+        const mod = await import(filePath);
+        if (mod.default && mod.default.trigger && mod.default.handler) {
+          commandModules.push(mod.default);
+          console.log(`Loaded command: ${mod.default.trigger.join(", ")}`);
+        } else {
+          console.warn(`Skipped ${file}: Missing default export`);
+        }
+      } catch (err) {
+        console.error(`Failed to load command ${file}:`, err);
+      }
+    }
+  } else {
+    console.error(`Commands directory not found at: ${commandsPath}`);
+  }
+
   await initVm();
+
   await app.start();
   console.log(`slack-vm running | ${new Date().toISOString()}`);
+  
   app.client.chat.postMessage({
     channel: Bun.env.SLACK_CHANNEL_ID || "",
     text: `slack-vm is now online! || ${new Date().toDateString()}`,
   });
+  
   isReady = true;
-  // update channel canvas
+  
   updateChannelCanvas(app);
   setInterval(
     () => {
       updateChannelCanvas(app);
     },
     1000 * 60 * 60 * 12,
-  ); // every 12 hours
+  ); 
 })();
 
 process.on("SIGINT", async () => {
