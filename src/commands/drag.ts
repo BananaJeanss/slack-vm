@@ -13,17 +13,23 @@ export default {
     const validButtons = ["left", "right", "middle"];
     const validDirections = ["up", "down", "left", "right"];
     if (!button || !direction || !pixelsStr) {
-      await say(`Invalid drag command. Use "drag <button> <direction> <pixels>"`);
+      await say(
+        `Invalid drag command. Use "drag <button> <direction> <pixels>"`,
+      );
       return;
     }
 
     if (!validButtons.includes(button)) {
-      await say(`Invalid button "${button}". Use "left", "right", or "middle".`);
+      await say(
+        `Invalid button "${button}". Use "left", "right", or "middle".`,
+      );
       return;
     }
 
     if (!validDirections.includes(direction)) {
-      await say(`Invalid direction "${direction}". Use "up", "down", "left", or "right".`);
+      await say(
+        `Invalid direction "${direction}". Use "up", "down", "left", or "right".`,
+      );
       return;
     }
 
@@ -61,7 +67,7 @@ export default {
         filename: screenshot,
         title: prefixUserid(
           `Dragged mouse with ${button} button to (${x}, ${y})`,
-          msg
+          msg,
         ),
       });
     } else {

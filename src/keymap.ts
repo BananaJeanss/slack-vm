@@ -28,7 +28,7 @@ export const KEY_MAP: Record<string, string> = {
   win: "meta_l",
   cmd: "meta_l",
 
-    // Function Keys
+  // Function Keys
   f1: "f1",
   f2: "f2",
   f3: "f3",

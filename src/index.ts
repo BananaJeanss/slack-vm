@@ -121,10 +121,12 @@ app.message("", async ({ message, say, client }) => {
 
   // load commands
   const commandsPath = path.join(import.meta.dir, "commands");
-  
+
   // Check if directory exists to avoid crash
   if (fs.existsSync(commandsPath)) {
-    const files = fs.readdirSync(commandsPath).filter((file) => file.endsWith(".ts"));
+    const files = fs
+      .readdirSync(commandsPath)
+      .filter((file) => file.endsWith(".ts"));
 
     for (const file of files) {
       const filePath = path.join(commandsPath, file);
@@ -149,21 +151,21 @@ app.message("", async ({ message, say, client }) => {
 
   await app.start();
   console.log(`slack-vm running | ${new Date().toISOString()}`);
-  
+
   app.client.chat.postMessage({
     channel: Bun.env.SLACK_CHANNEL_ID || "",
     text: `slack-vm is now online! || ${new Date().toDateString()}`,
   });
-  
+
   isReady = true;
-  
+
   updateChannelCanvas(app);
   setInterval(
     () => {
       updateChannelCanvas(app);
     },
     1000 * 60 * 60 * 12,
-  ); 
+  );
 })();
 
 process.on("SIGINT", async () => {

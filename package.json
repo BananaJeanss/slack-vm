@@ -4,7 +4,8 @@
   "scripts": {
     "setup-user": "bun run scripts/usersetup.ts",
     "start": "bun run src/index.ts",
-    "lint": "eslint . --ext .ts"
+    "lint": "eslint . --ext .ts",
+    "prettier": "prettier --write ."
   },
   "type": "module",
   "private": true,
@@ -13,6 +14,7 @@
     "@types/bun": "latest",
     "eslint": "^9.39.2",
     "globals": "^17.3.0",
+    "prettier": "3.8.1",
     "typescript-eslint": "^8.54.0"
   },
   "peerDependencies": {

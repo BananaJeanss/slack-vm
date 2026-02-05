@@ -10,10 +10,10 @@ export function reactWith(
   msg: GenericMessageEvent,
   client: WebClient,
 ) {
-    if (Bun.env.NOREACTIONS === "true") return;
-    client.reactions.add({
-      name: name,
-      channel: msg.channel,
-      timestamp: msg.ts,
-    });
-  }
+  if (Bun.env.NOREACTIONS === "true") return;
+  client.reactions.add({
+    name: name,
+    channel: msg.channel,
+    timestamp: msg.ts,
+  });
+}

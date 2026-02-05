@@ -1,4 +1,3 @@
-
 import { getQemuKey } from "../keymap";
 import { keyPressEnter } from "../keypress";
 import printScreen from "../print";

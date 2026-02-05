@@ -33,7 +33,8 @@ const doubleTripleClickCommand: CommandModule = {
           file: fs.createReadStream(screenshot),
           filename: screenshot,
           title: prefixUserid(
-            `${doubleOrTriple === 2 ? "Double" : "Triple"} clicked ${input} mouse button`, msg
+            `${doubleOrTriple === 2 ? "Double" : "Triple"} clicked ${input} mouse button`,
+            msg,
           ),
         });
       } else {

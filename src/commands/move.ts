@@ -9,7 +9,7 @@ export default {
   trigger: ["move"],
   handler: (async (args, say, msg, app) => {
     const validmoves = ["up", "down", "left", "right"];
-    
+
     const [direction, pixelsStr] = args;
 
     if (!direction || !pixelsStr || !validmoves.includes(direction)) {
@@ -26,7 +26,7 @@ export default {
 
     let x = 0;
     let y = 0;
-    
+
     switch (direction) {
       case "up":
         y = -pixels;

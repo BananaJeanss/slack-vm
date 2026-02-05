@@ -22,7 +22,7 @@ export async function keyPress(key: string, duration?: number) {
     "command-line": `sendkey ${qemuKey} ${duration ?? HOLD_MS}`,
   });
 
-  await sleep((duration ?? HOLD_MS));
+  await sleep(duration ?? HOLD_MS);
 
   return true;
 }
@@ -63,4 +63,3 @@ export async function keySequence(keys: string[], delay: number = 100) {
     await sleep(delay);
   }
 }
-
