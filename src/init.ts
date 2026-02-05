@@ -48,11 +48,17 @@ export default async function initVm() {
     `${Bun.env.SVM_NET_DEVICE || "e1000"},netdev=n1`,
 
     // maus
-    ...(Bun.env.SVM_USE_USBTABLET === "true" ? [
-    "-usb",
+    ...(Bun.env.SVM_USE_USBTABLET === "true"
+      ? ["-usb", "-device", "usb-tablet"]
+      : []),
+
+    // audio backend
+    "-audiodev",
+    "none,id=snd0",
+
+    // speaker
     "-device",
-    "usb-tablet",
-    ] : []),
+    "ac97,audiodev=snd0",
 
     // drives
     "-drive",
@@ -110,12 +116,26 @@ export default async function initVm() {
   }
 }
 
+// hard reset instead of QMP system_reset since if the vm is down the whole process goes kaboom
 export async function restartVm() {
   console.log("Restarting VM...");
-  QmpCommand("system_reset");
-  await sleep(5000); // wait a second
-  vmUpSince = Date.now();
-  console.log("VM restarted successfully.");
+
+  try {
+    try {
+      await killVm();
+    } catch {
+      console.log("VM was already dead, proceeding to init...");
+    }
+
+    await sleep(1000);
+
+    await initVm();
+
+    vmUpSince = Date.now();
+    console.log("VM restarted successfully.");
+  } catch (e) {
+    throw new Error(`Failed to restart VM: ${e}`);
+  }
   return 0;
 }
 
