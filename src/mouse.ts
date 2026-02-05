@@ -37,6 +37,14 @@ export async function clickMouse(button: "left" | "right" | "middle") {
   });
 }
 
+// double and triple bombooooclaaaat click
+export async function bomboclatClick(button: "left" | "right" | "middle", clicks: number) {
+  for (let i = 0; i < clicks; i++) {
+    await clickMouse(button);
+    await sleep(20);
+  }
+}
+
 export async function dragMouse(
   button: "left" | "right" | "middle",
   x: number,

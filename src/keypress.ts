@@ -5,16 +5,26 @@ import { getQemuKey } from "./keymap";
 // testing cause ts doesnt work in undertale for some reason
 const HOLD_MS = 50;
 
-export async function keyPress(key: string) {
+export async function keyPress(key: string, duration?: number) {
   const qemuKey = getQemuKey(key);
+  // if there's a duration, this is checked in command handler anyways but cap anyways here jsut in case
+  if (duration !== undefined && duration > 7000) {
+    console.warn(`Duration ${duration}ms is too long, capping to 7000ms.`);
+    duration = 7000;
+  }
+
   if (qemuKey === null) {
     console.warn(`Key "${key}" is not allowed.`);
     return null;
   }
 
   await QmpCommand("human-monitor-command", {
-    "command-line": `sendkey ${qemuKey} ${HOLD_MS}`,
+    "command-line": `sendkey ${qemuKey} ${duration ?? HOLD_MS}`,
   });
+
+  await sleep((duration ?? HOLD_MS));
+
+  return true;
 }
 
 export async function keyPressEnter(key: string) {
@@ -53,3 +63,4 @@ export async function keySequence(keys: string[], delay: number = 100) {
     await sleep(delay);
   }
 }
+

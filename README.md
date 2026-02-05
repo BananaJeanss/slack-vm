@@ -8,19 +8,21 @@ Control a QEMU VM, through slack!
 
 ## Commands
 
-| Command                    | Description                                                                                  | Example Usage             |
-| :------------------------- | :------------------------------------------------------------------------------------------- | :------------------------ |
-| `print`                    | Takes a screenshot of the VM's current screen.                                               | `print`                   |
-| `key <key>`                | Presses a single key on the VM.                                                              | `key enter`, `key escape` |
-| `keypress <key>`           | Presses a specific key followed immediately by the `enter` key.                              | `keypress return`         |
-| `combo <keys>`             | Executes a key combination. Use `+` to separate keys.                                        | `combo ctrl+alt+delete`   |
-| `type <text>`              | Types a sequence of characters into the VM.                                                  | `type echo "hello world"` |
-| `move <dir> <px>`          | Moves the mouse cursor in a direction (`up`, `down`, `left`, `right`) by a number of pixels. | `move right 100`          |
-| `click <button>`           | Performs a mouse click with the specified button (`left`, `right`, or `middle`).             | `click left`              |
-| `scroll <amount>`          | Scrolls the mouse wheel by the specified amount (positive for up, negative for down).        | `scroll -50`              |
-| `drag <button> <dir> <px>` | Drags the mouse while holding the specified button in a direction by a number of pixels.     | `drag left down 200`      |
-| `restart`                  | Votes to restart the VM.                                                                     | `restart`                 |
-| `uptime`                   | Displays the bot and VM uptime.                                                              | `uptime`                  |
+| Command                    | Description                                                                                  | Example Usage               |
+| :------------------------- | :------------------------------------------------------------------------------------------- | :-------------------------- |
+| `print`                    | Takes a screenshot of the VM's current screen.                                               | `print`                     |
+| `key <key> [hold]`         | Presses a single key on the VM.                                                              | `key enter`, `key left 500` |
+| `keypress <key>`           | Presses a specific key followed immediately by the `enter` key.                              | `keypress return`           |
+| `combo <keys>`             | Executes a key combination. Use `+` to separate keys.                                        | `combo ctrl+alt+delete`     |
+| `type <text>`              | Types a sequence of characters into the VM.                                                  | `type echo "hello world"`   |
+| `move <dir> <px>`          | Moves the mouse cursor in a direction (`up`, `down`, `left`, `right`) by a number of pixels. | `move right 100`            |
+| `click <button>`           | Performs a mouse click with the specified button (`left`, `right`, or `middle`).             | `click left`                |
+| `doubleclick <button>`     | Performs a double mouse click with the specified button.                                     | `doubleclick left`          |
+| `tripleclick <button>`     | Performs a triple mouse click with the specified button.                                     | `tripleclick left`          |
+| `scroll <amount>`          | Scrolls the mouse wheel by the specified amount (positive for up, negative for down).        | `scroll -50`                |
+| `drag <button> <dir> <px>` | Drags the mouse while holding the specified button in a direction by a number of pixels.     | `drag left down 200`        |
+| `restart`                  | Votes to restart the VM.                                                                     | `restart`                   |
+| `uptime`                   | Displays the bot and VM uptime.                                                              | `uptime`                    |
 
 > [!NOTE]
 > You can add # in front of your messages for it to be ignored by the bot.
