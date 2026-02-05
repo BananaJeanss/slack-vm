@@ -14,7 +14,7 @@ export default {
       await say(`Please provide text to type. Usage: \`type <text>\``);
       return;
     }
-    const input = rawText.slice(5);
+    const input = rawText
     let allValid = true;
     // reasonable limit
     if (input.length > 256) {

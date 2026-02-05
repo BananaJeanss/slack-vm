@@ -3,6 +3,7 @@
   "module": "src/index.ts",
   "scripts": {
     "setup-user": "bun run scripts/usersetup.ts",
+    "create-qcow2": "bun run scripts/qcow2create.ts",
     "start": "bun run src/index.ts",
     "lint": "eslint . --ext .ts",
     "prettier": "prettier --write ."

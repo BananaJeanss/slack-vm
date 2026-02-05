@@ -62,7 +62,7 @@ export default async function initVm() {
 
     // drives
     "-drive",
-    `file=${Bun.env.SVM_DISK},format=raw,index=0,media=disk`,
+    `file=${Bun.env.SVM_DISK},format=${Bun.env.SVM_DISK_FORMAT || "qcow2"},index=0,media=disk`,
 
     // monitor via qmp
     "-qmp",
