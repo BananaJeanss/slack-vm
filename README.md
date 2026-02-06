@@ -43,7 +43,10 @@ Requirements:
 2. Create a qcow disk and download an ISO
 
    ```bash
-   qemu-img create arch.qcow 5G
+   # replace ./isos/ with the path you want to create it in & 10G with desired capacity
+   qemu-img create -f qcow2 ./isos/ 10G
+   # OR
+   bun run create-qcow2
    ```
 
 3. (Optional) Setup a user for the bot to use (for security, includes iptables to block local network access)
