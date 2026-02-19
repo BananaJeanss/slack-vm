@@ -76,6 +76,7 @@ app.message("", async ({ message, say, client }) => {
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'");
+  // make sure ts gets reverted later cause otherwise no case sensitive typing
   const text = rawText.toLowerCase();
 
   // check if user is banned
@@ -100,7 +101,7 @@ app.message("", async ({ message, say, client }) => {
       mod.trigger.includes(commandName),
     );
     if (module) {
-      await module.handler(text.split(" ").slice(1), say, msg, app);
+      await module.handler(rawText.split(" ").slice(1), say, msg, app);
     } else {
       if (text.startsWith("#")) {
         isProcessing = false;
