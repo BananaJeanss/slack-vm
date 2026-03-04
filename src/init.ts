@@ -6,9 +6,6 @@ export let vmUpSince: number = 0;
 // init the qemu vm
 export default async function initVm() {
   console.log("Initializing VM...");
-  if (!Bun.env.SVM_DISK) {
-    throw new Error("No SVM_DISK in .env specified!");
-  }
 
   // check if anything running on port 4444
   try {
