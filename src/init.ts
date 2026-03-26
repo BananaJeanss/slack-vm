@@ -113,20 +113,24 @@ export default async function initVm() {
   }
 }
 
-// hard reset instead of QMP system_reset since if the vm is down the whole process goes kaboom
 export async function restartVm() {
   console.log("Restarting VM...");
 
   try {
-    try {
-      await killVm();
-    } catch {
-      console.log("VM was already dead, proceeding to init...");
+    if (Bun.env.USE_PROXMOX === "true") {
+      await QmpCommand("system_reset");
+    } else {
+      // hard reset instead of QMP system_reset since if the vm is down the whole process goes kaboom
+      try {
+        await killVm();
+      } catch {
+        console.log("VM was already dead, proceeding to init...");
+      }
+
+      await sleep(1000);
+
+      await initVm();
     }
-
-    await sleep(1000);
-
-    await initVm();
 
     vmUpSince = Date.now();
     console.log("VM restarted successfully.");

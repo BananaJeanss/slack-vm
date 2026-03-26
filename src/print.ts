@@ -5,7 +5,6 @@ import { sleep } from "bun";
 
 export default async function printScreen(): Promise<string | null> {
   const timestamp = Date.now();
-  const ppmPath = `./screenshots/screenshot-${timestamp}.ppm`;
   const pngPath = `./screenshots/screenshot-${timestamp}.png`;
 
   try {
@@ -14,6 +13,29 @@ export default async function printScreen(): Promise<string | null> {
     } catch {
       // dir already exists
     }
+
+    if (Bun.env.USE_PROXMOX === "true") {
+      const host = Bun.env.PROXMOX_HOST;
+      const node = Bun.env.PROXMOX_NODE;
+      const vmid = Bun.env.PROXMOX_VMID;
+      const token = Bun.env.PROXMOX_API_TOKEN;
+
+      const res = await fetch(
+        `https://${host}:8006/api2/png/nodes/${node}/qemu/${vmid}/screenshot`,
+        {
+          headers: { Authorization: `PVEAPIToken=${token}` },
+          // proxmox uses self-signed certs
+          tls: { rejectUnauthorized: false },
+        },
+      );
+
+      if (!res.ok) throw new Error(`Proxmox API returned ${res.status}`);
+
+      fs.writeFileSync(pngPath, Buffer.from(await res.arrayBuffer()));
+      return pngPath;
+    }
+
+    const ppmPath = `./screenshots/screenshot-${timestamp}.ppm`;
 
     await QmpCommand("screendump", { filename: ppmPath });
 

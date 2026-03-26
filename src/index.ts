@@ -14,11 +14,7 @@ if (process.platform !== "linux") {
   process.exit(1);
 }
 
-if (
-  Bun.spawnSync(["which", "qemu-system-x86_64"]).stdout.toString().trim() ===
-    "" ||
-  !UsingProxmox // if using proxmox, local qemu is not needed
-) {
+if (!UsingProxmox && Bun.spawnSync(["which", "qemu-system-x86_64"]).stdout.toString().trim() === "") {
   console.error("qemu-system-x86_64 not found in PATH. Please install QEMU.");
   process.exit(1);
 }
@@ -177,6 +173,8 @@ app.message("", async ({ message, say, client }) => {
 
 process.on("SIGINT", async () => {
   console.log("Shutting down slack-vm...");
-  await killVm();
+  if (!UsingProxmox) {
+    await killVm();
+  }
   process.exit();
 });
