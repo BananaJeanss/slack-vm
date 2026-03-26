@@ -6,6 +6,8 @@ import { reactWith } from "./commandtools";
 import path from "path";
 import type { CommandModule, SlackMessage } from "./types";
 
+const UsingProxmox = Bun.env.USE_PROXMOX === "true";
+
 // basic linux/qemu check
 if (process.platform !== "linux") {
   console.error("slack-vm currently only supports Linux");
@@ -13,7 +15,9 @@ if (process.platform !== "linux") {
 }
 
 if (
-  Bun.spawnSync(["which", "qemu-system-x86_64"]).stdout.toString().trim() === ""
+  Bun.spawnSync(["which", "qemu-system-x86_64"]).stdout.toString().trim() ===
+    "" ||
+  !UsingProxmox // if using proxmox, local qemu is not needed
 ) {
   console.error("qemu-system-x86_64 not found in PATH. Please install QEMU.");
   process.exit(1);
@@ -21,21 +25,23 @@ if (
 
 // test LAN access - will fail if iptables blocks it
 try {
-  const proc = Bun.spawn(["ping", "-c", "1", "-W", "1", "192.168.1.1"], {
-    stderr: "ignore",
-    stdout: "ignore",
-  });
+  if (!UsingProxmox) {
+    const proc = Bun.spawn(["ping", "-c", "1", "-W", "1", "192.168.1.1"], {
+      stderr: "ignore",
+      stdout: "ignore",
+    });
 
-  const exitCode = await proc.exited;
+    const exitCode = await proc.exited;
 
-  if (exitCode === 0) {
-    console.warn("------------------------------------------------");
-    console.warn(
-      "WARNING: LAN access detected!\nYou should run this under a non-privileged user and configure iptables to block LAN access for security reasons.",
-    );
-    console.warn("------------------------------------------------");
-  } else {
-    // good
+    if (exitCode === 0) {
+      console.warn("------------------------------------------------");
+      console.warn(
+        "WARNING: LAN access detected!\nYou should run this under a non-privileged user and configure iptables to block LAN access for security reasons.",
+      );
+      console.warn("------------------------------------------------");
+    } else {
+      // good
+    }
   }
 } catch {
   // good
@@ -148,7 +154,7 @@ app.message("", async ({ message, say, client }) => {
     console.error(`Commands directory not found at: ${commandsPath}`);
   }
 
-  await initVm();
+  if (!UsingProxmox) await initVm();
 
   await app.start();
   console.log(`slack-vm running | ${new Date().toISOString()}`);

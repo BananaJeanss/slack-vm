@@ -4,9 +4,17 @@ export async function QmpCommand<T = unknown>(
 ) {
   return new Promise<T>((resolve, reject) => {
     try {
+      const isProxmox = Bun.env.USE_PROXMOX === "true";
+      const hostname = isProxmox
+        ? (Bun.env.PROXMOX_VNC_IP ?? "localhost")
+        : "localhost";
+      const port = isProxmox
+        ? parseInt(Bun.env.PROXMOX_VNC_PORT ?? "4444", 10)
+        : 4444;
+
       Bun.connect({
-        hostname: "localhost",
-        port: 4444,
+        hostname,
+        port,
         socket: {
           data(sock, data) {
             const resp = data.toString();
