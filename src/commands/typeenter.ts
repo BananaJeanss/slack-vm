@@ -44,7 +44,7 @@ export default {
           channel_id: msg.channel,
           file: fs.createReadStream(screenshot),
           filename: screenshot,
-          title: prefixUserid(`Typed "${input}"`, msg),
+          title: prefixUserid(`Typed + Entered "${input}"`, msg),
         });
       }
     }
